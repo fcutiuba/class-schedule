@@ -183,7 +183,10 @@ cython_debug/
 # Files
 assignments.csv
 class_rosters.csv
-files/
+All Students.csv
+Audience Sign Up.csv
+Presentations.csv
+Presenter names.csv
 output/
 
 # Graph solver
