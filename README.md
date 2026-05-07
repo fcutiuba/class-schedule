@@ -8,10 +8,12 @@ This program assigns students to presentations (or classes) for multiple schedul
 
 The system processes data from four core CSV files located in the `files/` directory. For detailed information on the required format, column headers, and example data for these files, please refer to the **[CSV Input Structure Guide](CSV_STRUCTURE.md)**.
 
-1. **All Students.csv**: The authoritative roster of students.
-2. **Presenter Names.csv**: A list of students who are presenting and should be excluded from audience assignment.
+1. **All students.csv**: The authoritative roster of students.
+2. **Presenter names.csv**: A list of students who are presenting and should be excluded from audience assignment.
 3. **Audience Sign Up.csv**: Student preference rankings (1st through 5th choice) for various blocks.
 4. **Presentations.csv**: The canonical list of available presentations, their categories, room numbers, and teacher advisors.
+
+> **Note:** If these files are missing or incorrectly named, the system will fail validation.
 
 ---
 
@@ -51,6 +53,7 @@ Run the system from the project root using `python -m scheduler.cli`.
 | `--category <name>` | Run for a specific block (default: Academic) |
 | `--all` | Run for all categories found in the system |
 | `--pdf` | Generate printable PDF rosters and schedules |
+| `--validate` | Only validate CSV files without running assignment |
 | `--min-cap <n>` | Set a custom minimum class capacity |
 | `--max-cap <n>` | Set a custom maximum class capacity |
 

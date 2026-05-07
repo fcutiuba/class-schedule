@@ -2,6 +2,7 @@ import time
 import argparse
 import pandas as pd
 import os
+import sys
 
 if __package__ in (None, ""):
     import os, sys
@@ -12,6 +13,7 @@ if __package__ in (None, ""):
     from scheduler.titles import get_all_categories
     from scheduler.io_utils import read_csv_robust
     from scheduler.pdf_gen import generate_class_rosters, generate_student_schedules
+    from scheduler.validator import validate_csv_files
 else:
     from .config import ALIASES, DEFAULT_MIN_CAP, DEFAULT_MAX_CAP, DEFAULT_CATEGORY
     from .run_category import run_category_assignment
@@ -19,6 +21,7 @@ else:
     from .titles import get_all_categories
     from .io_utils import read_csv_robust
     from .pdf_gen import generate_class_rosters, generate_student_schedules
+    from .validator import validate_csv_files
 
 def main():
     parser = argparse.ArgumentParser(description="Presentation Assignment System")
@@ -29,6 +32,7 @@ def main():
     parser.add_argument("--min-cap", type=int, default=DEFAULT_MIN_CAP, help="Minimum class capacity")
     parser.add_argument("--max-cap", type=int, default=DEFAULT_MAX_CAP, help="Maximum class capacity")
     parser.add_argument("--pdf", action="store_true", help="Generate printable PDF rosters and schedules")
+    parser.add_argument("--validate", action="store_true", help="Only validate CSV files without running assignment")
     
     args = parser.parse_args()
 
@@ -38,10 +42,24 @@ def main():
     PRESENTATIONS_CSV = "files/Presentations.csv"
     MIN_CAP, MAX_CAP  = args.min_cap, args.max_cap
 
+    # 1. Validation Step
+    print(">>> VALIDATING INPUT FILES <<<")
+    is_ok, messages = validate_csv_files(ROSTER_CSV, PRESENTERS_CSV, SIGNUPS_CSV, PRESENTATIONS_CSV)
+    for msg in messages:
+        print(msg)
+    
+    if not is_ok:
+        print("\n[CRITICAL] Validation failed. Please fix the errors above.")
+        sys.exit(1)
+    
+    if args.validate:
+        print("\nValidation complete. No errors found.")
+        return
+
+    # 2. Loading and Processing
     pres_df = read_csv_robust(PRESENTATIONS_CSV, "Presentations")
     if args.all:
         categories = get_all_categories(pres_df)
-        print(f"Found categories: {categories}")
     else:
         categories = [args.category]
 

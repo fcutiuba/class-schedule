@@ -1,11 +1,19 @@
 # CSV Input Structure Guide
 
-To ensure the Presentation Assignment System runs correctly, your input files in the `files/` directory must follow the structures outlined below. The system is designed to be robust, but it relies on specific column headers to identify data.
+To ensure the Presentation Assignment System runs correctly, all input CSV files **must** be placed in the `files/` directory at the root of the project. They must also match the following exact filenames:
+
+- `All students.csv`
+- `Presenter names.csv`
+- `Audience Sign Up.csv`
+- `Presentations.csv`
+
+The system is designed to be robust, but it relies on these specific locations and filenames, as well as specific column headers within each file.
 
 ---
 
 ## 1. All students.csv
 This is the master roster of all students in the school.
+Location: `files/All students.csv`
 
 | Required Column | Description | Examples |
 | :--- | :--- | :--- |
