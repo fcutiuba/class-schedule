@@ -6,7 +6,7 @@ This program assigns students to presentations (or classes) for multiple schedul
 
 ## Overview
 
-The system processes data from four core CSV files located in the `files/` directory:
+The system processes data from four core CSV files located in the `files/` directory. For detailed information on the required format, column headers, and example data for these files, please refer to the **[CSV Input Structure Guide](CSV_STRUCTURE.md)**.
 
 1. **All Students.csv**: The authoritative roster of students.
 2. **Presenter Names.csv**: A list of students who are presenting and should be excluded from audience assignment.
