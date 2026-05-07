@@ -78,15 +78,15 @@ PSI (0–1): 0.855
 
 
 This means:
-- 62% of students received their first choice.
-- 84% received one of their top two choices.
+- 58% of students received their first choice.
+- 87% received one of their top two choices.
 - The average satisfaction is high, corresponding roughly to “most students got what they wanted.”
 
 ---
 
 ## Configuration
 
-Most logic now lives in the `scheduler/` package for clarity and modularity.  
+Most logic now lives in the `scheduler/` package.  
 
 You can modify key parameters inside `scheduler/config.py`:
 
