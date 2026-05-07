@@ -37,6 +37,22 @@ def run_category_assignment(
             ma = int(per_class_overrides[t].get("max", ma))
         mins.append(mi); maxs.append(ma)
 
+    # Pre-solve feasibility check
+    total_students = len(students)
+    total_min_cap = sum(mins)
+    total_max_cap = sum(maxs)
+
+    if total_students < total_min_cap:
+        raise ValueError(
+            f"Infeasible: Total students ({total_students}) is less than the sum of minimum capacities ({total_min_cap}). "
+            "Lower the MIN_CAP or reduce the number of classes."
+        )
+    if total_students > total_max_cap:
+        raise ValueError(
+            f"Infeasible: Total students ({total_students}) exceeds the sum of maximum capacities ({total_max_cap}). "
+            "Increase the MAX_CAP or add more classes."
+        )
+
     assigned_titles, counts = solve_assignment_lp(students, class_titles, mins, maxs)
 
     def rank_of(s, title):

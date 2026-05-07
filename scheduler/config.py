@@ -6,6 +6,6 @@ ALIASES = {
         "How Aerodynamics In F1 Works (Pair with Cessna)",
 }
 
-DEFAULT_MIN_CAP = 9
+DEFAULT_MIN_CAP = 12
 DEFAULT_MAX_CAP = 20
 DEFAULT_CATEGORY = "Academic"
