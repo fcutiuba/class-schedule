@@ -87,7 +87,7 @@ This means:
 
 ## Configuration
 
-Most logic now lives in the `scheduler/` package for clarity and modularity.  
+Most logic now lives in the `scheduler/` package.  
 
 You can modify key parameters inside `scheduler/config.py`:
 
