@@ -184,6 +184,7 @@ cython_debug/
 assignments.csv
 class_rosters.csv
 files/
+output/
 
 # Graph solver
 graph_solver.py

@@ -18,6 +18,13 @@ def _norm_category_from_presentations(val) -> str:
         word = word[:-1]
     return word.capitalize()
 
+def get_all_categories(presentations_df: pd.DataFrame):
+    cat_col = "Presentation Category (choose the best fit)"
+    if cat_col not in presentations_df.columns:
+        raise ValueError("[Presentations] Missing category column.")
+    cats = presentations_df[cat_col].map(_norm_category_from_presentations).unique()
+    return sorted([c for c in cats if c])
+
 def _build_canonical_titles_from_presentations(presentations_df: pd.DataFrame, category_name: str):
     cat_col   = "Presentation Category (choose the best fit)"
     title_col = 'Name of your presentation: "Creative Title: Descriptive Title"  (15 words max)'
