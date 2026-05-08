@@ -45,11 +45,20 @@ pip install pandas numpy scipy fpdf2
 ```
 
 ### Execution
+Run the system from the project root.
+
+**Launch the Graphical User Interface (Recommended):**
+```bash
+python -m scheduler.cli --gui
+```
+
+**CLI Usage:**
 Run the system from the project root using `python -m scheduler.cli`.
 
 **CLI Options:**
 | Option | Description |
 |--------|-------------|
+| `--gui` | Launch the graphical user interface |
 | `--category <name>` | Run for a specific block (default: Academic) |
 | `--all` | Run for all categories found in the system |
 | `--pdf` | Generate printable PDF rosters and schedules |
@@ -88,6 +97,8 @@ All generated files are organized within the `output/` directory:
 ```graphql
 scheduler/
 ├── cli.py              # Main entry point with CLI argument parsing
+├── gui.py              # Graphical user interface (Tkinter)
+├── engine.py           # Core orchestration engine (shared by CLI & GUI)
 ├── config.py           # Global settings (caps, default category, aliases)
 ├── io_utils.py         # Robust CSV reading utilities
 ├── metrics.py          # Satisfaction metrics (Top-N, PSI)
