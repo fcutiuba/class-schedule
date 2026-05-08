@@ -73,6 +73,9 @@ python -m scheduler.cli --all --pdf
 
 # Run for a specific block with custom limits
 python -m scheduler.cli --category Culture --min-cap 10 --max-cap 25
+
+# Run in GUI mode
+python -m scheduler.cli --gui
 ```
 
 ---
