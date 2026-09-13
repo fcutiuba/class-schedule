@@ -57,23 +57,103 @@ def create_zip_archive(file_list):
 
 
 def render_pdf_preview(pdf_path, height=600):
-    """Embed and display a PDF in an HTML iframe using base64 encoding."""
+    """Embed and display a PDF using Mozilla PDF.js canvas rendering to prevent browser data-URI blocking."""
     try:
         with open(pdf_path, "rb") as f:
             base64_pdf = base64.b64encode(f.read()).decode("utf-8")
-        pdf_html = (
-            f'<iframe '
-            f'src="data:application/pdf;base64,{base64_pdf}#toolbar=1&navpanes=0" '
-            f'width="100%" '
-            f'height="{height}" '
-            f'type="application/pdf" '
-            f'style="border: 1px solid #ddd; border-radius: 4px;">'
-            f'<p>PDF preview is not supported directly in this browser. Please use the download button above.</p>'
-            f'</iframe>'
-        )
-        st.markdown(pdf_html, unsafe_allow_html=True)
+        
+        pdfjs_html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+          <style>
+            body {{
+              margin: 0;
+              padding: 10px;
+              background-color: #f8f9fa;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            }}
+            #pdf-container {{
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              width: 100%;
+            }}
+            canvas {{
+              margin-bottom: 12px;
+              box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+              max-width: 98%;
+              height: auto !important;
+              background: white;
+              border: 1px solid #ddd;
+              border-radius: 4px;
+            }}
+            .status-text {{
+              color: #666;
+              font-size: 13px;
+              margin-top: 15px;
+            }}
+          </style>
+        </head>
+        <body>
+          <div id="pdf-container"><div class="status-text">Rendering document...</div></div>
+          <script>
+            try {{
+              const rawData = atob("{base64_pdf}");
+              const uint8Array = new Uint8Array(rawData.length);
+              for (let i = 0; i < rawData.length; i++) {{
+                uint8Array[i] = rawData.charCodeAt(i);
+              }}
+              pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+              const loadingTask = pdfjsLib.getDocument({{data: uint8Array}});
+              loadingTask.promise.then(function(pdf) {{
+                const container = document.getElementById("pdf-container");
+                container.innerHTML = "";
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {{
+                  pdf.getPage(pageNum).then(function(page) {{
+                    const viewport = page.getViewport({{scale: 1.3}});
+                    const canvas = document.createElement("canvas");
+                    const context = canvas.getContext("2d");
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    container.appendChild(canvas);
+                    page.render({{canvasContext: context, viewport: viewport}});
+                  }});
+                }}
+              }}).catch(function(err) {{
+                document.getElementById("pdf-container").innerHTML = "<p style='color:#c00;'>Unable to render preview: " + err.message + "</p>";
+              }});
+            }} catch(e) {{
+              document.getElementById("pdf-container").innerHTML = "<p style='color:#c00;'>Initialization error: " + e.message + "</p>";
+            }}
+          </script>
+        </body>
+        </html>
+        """
+        import streamlit.components.v1 as components
+        components.html(pdfjs_html, height=height, scrolling=True)
     except Exception as e:
         st.warning(f"Could not preview PDF: {e}")
+
+
+def find_student_schedule(email, assignment_dfs):
+    """Find and return assigned classes for a specific student email."""
+    clean_email = email.lower().strip()
+    rows = []
+    for df in assignment_dfs:
+        if "Email" in df.columns:
+            matched = df[df["Email"].astype(str).str.lower().str.strip() == clean_email]
+            if not matched.empty:
+                rows.append(matched)
+    if rows:
+        combined = pd.concat(rows, ignore_index=True)
+        cols = [c for c in ["Category", "AssignedClass", "AssignedRank"] if c in combined.columns]
+        return combined[cols].sort_values("Category" if "Category" in combined.columns else cols[0])
+    return None
 
 
 def find_class_students(target_filename, assignment_dfs):
@@ -689,8 +769,17 @@ def main():
                             )
 
                     # In-browser schedule preview
-                    st.caption(f"Schedule preview for {selected_sched_name.replace('.pdf', '')}:")
-                    render_pdf_preview(target_sched["full_path"], height=550)
+                    sched_view_pdf, sched_view_table = st.tabs(["PDF Document Preview", "Schedule Table"])
+                    with sched_view_pdf:
+                        render_pdf_preview(target_sched["full_path"], height=550)
+                    with sched_view_table:
+                        assignment_dfs = [pd.read_csv(f["full_path"]) for f in csv_files if f["type"] == "Assignment"]
+                        matched_sched = find_student_schedule(selected_sched_name.replace(".pdf", ""), assignment_dfs)
+                        if matched_sched is not None and not matched_sched.empty:
+                            st.caption(f"Assigned Classes for {selected_sched_name.replace('.pdf', '')}:")
+                            st.dataframe(matched_sched, use_container_width=True, hide_index=True)
+                        else:
+                            st.caption("Detailed schedule table not found in assignment CSVs.")
 
                 # Show student list in a compact table inside an expander
                 with st.expander(f"List of available schedules ({len(filtered_scheds)} of {len(sched_pdfs)})", expanded=False):
