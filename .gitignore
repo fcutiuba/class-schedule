@@ -181,12 +181,7 @@ cython_debug/
 .cursorindexingignore
 
 # Files
-assignments.csv
-class_rosters.csv
-All Students.csv
-Audience Sign Up.csv
-Presentations.csv
-Presenter names.csv
+real_files/
 output/
 
 # Graph solver
