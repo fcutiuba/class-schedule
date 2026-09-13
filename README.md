@@ -39,26 +39,30 @@ The system processes data from four core CSV files located in the `files/` direc
 ## Building and Running
 
 ### Prerequisites
-Ensure you have Python 3.x installed along with the following libraries:
+Ensure you have Python 3.x installed along with the required libraries:
 ```bash
-pip install pandas numpy scipy fpdf2
+pip install -r requirements.txt
 ```
 
-### Execution
-Run the system from the project root.
-
-**Launch the Graphical User Interface (Recommended):**
+### Running the Streamlit Demo (Recommended)
+Launch the modern Streamlit web application:
 ```bash
-python -m scheduler.cli --gui
+streamlit run app.py
 ```
+This opens an interactive browser interface where you can:
+- Upload CSVs or use bundled sample data from `files/`
+- Run validation checks before solving
+- Select categories or run all categories with custom capacity bounds
+- View live optimization logs
+- Download generated CSV assignments, rosters, and printable PDFs individually or as a single ZIP bundle
 
-**CLI Usage:**
+### CLI Usage
 Run the system from the project root using `python -m scheduler.cli`.
 
 **CLI Options:**
 | Option | Description |
 |--------|-------------|
-| `--gui` | Launch the graphical user interface |
+| `--gui` | Launch the legacy Tkinter GUI (local-only; use `streamlit run app.py` for recommended interface) |
 | `--category <name>` | Run for a specific block (default: Academic) |
 | `--all` | Run for all categories found in the system |
 | `--pdf` | Generate printable PDF rosters and schedules |
@@ -74,7 +78,7 @@ python -m scheduler.cli --all --pdf
 # Run for a specific block with custom limits
 python -m scheduler.cli --category Culture --min-cap 10 --max-cap 25
 
-# Run in GUI mode
+# Launch the legacy Tkinter GUI
 python -m scheduler.cli --gui
 ```
 
@@ -98,9 +102,11 @@ All generated files are organized within the `output/` directory:
 ## Project Structure
 
 ```graphql
+app.py                  # Streamlit web application (recommended GUI)
+requirements.txt        # Python package dependencies
 scheduler/
 ├── cli.py              # Main entry point with CLI argument parsing
-├── gui.py              # Graphical user interface (Tkinter)
+├── gui.py              # Legacy graphical user interface (Tkinter)
 ├── engine.py           # Core orchestration engine (shared by CLI & GUI)
 ├── config.py           # Global settings (caps, default category, aliases)
 ├── io_utils.py         # Robust CSV reading utilities

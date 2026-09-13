@@ -25,7 +25,8 @@ def main():
     parser.add_argument("--max-cap", type=int, default=DEFAULT_MAX_CAP, help="Maximum class capacity")
     parser.add_argument("--pdf", action="store_true", help="Generate printable PDF rosters and schedules")
     parser.add_argument("--validate", action="store_true", help="Only validate CSV files without running assignment")
-    parser.add_argument("--gui", action="store_true", help="Launch the graphical user interface")
+    parser.add_argument("--gui", action="store_true", 
+                        help="Launch the legacy Tkinter GUI (local-only; use 'streamlit run app.py' for the recommended interface)")
     
     args = parser.parse_args()
 
@@ -40,9 +41,9 @@ def main():
         root.mainloop()
         return
 
-    ROSTER_CSV        = "files/All students.csv"
-    PRESENTERS_CSV    = "files/Presenter names.csv"
-    SIGNUPS_CSV       = "files/Audience Sign Up.csv"
+    ROSTER_CSV        = "files/All students.csv" if os.path.exists("files/All students.csv") else "files/All_students.csv"
+    PRESENTERS_CSV    = "files/Presenter names.csv" if os.path.exists("files/Presenter names.csv") else "files/Presenter_names.csv"
+    SIGNUPS_CSV       = "files/Audience Sign Up.csv" if os.path.exists("files/Audience Sign Up.csv") else "files/Audience_Sign_Up.csv"
     PRESENTATIONS_CSV = "files/Presentations.csv"
 
     if args.validate:
