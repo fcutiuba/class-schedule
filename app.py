@@ -363,23 +363,25 @@ def main():
     with col_act1:
         validate_btn = st.button(
             "Validate Only",
+            key="btn_validate_only",
             use_container_width=True,
             help="Check file schemas, required columns, and email consistency before solving.",
         )
     with col_act2:
         run_btn = st.button(
             "Run Assignment",
+            key="btn_run_assignment",
             type="primary",
             use_container_width=True,
             help="Solve linear program and generate output files.",
         )
     with col_act3:
-        if st.button("Clear Outputs", use_container_width=True, help="Delete all generated output files from disk"):
+        if st.button("Clear Outputs", key="btn_clear_outputs_main", use_container_width=True, help="Delete all generated output files from disk"):
             clear_output_directory("output")
             st.session_state.last_run_success = None
             st.rerun()
     with col_act4:
-        if st.button("Clear Logs", help="Reset execution logs"):
+        if st.button("Clear Logs", key="btn_clear_logs", help="Reset execution logs"):
             st.session_state.logs = []
             st.session_state.last_run_success = None
             st.session_state.feasibility_errors = []
@@ -425,61 +427,59 @@ def main():
             st.session_state.feasibility_errors = []
             st.session_state.last_run_success = None
 
-            log_container = st.empty()
             feasibility_alerts = []
 
-            def log_callback(msg):
-                st.session_state.logs.append(msg)
-                log_container.code("\n".join(st.session_state.logs), language="text")
-                if "Infeasible:" in msg:
-                    m = re.search(r"Infeasible:.*", msg)
-                    err_txt = m.group(0) if m else msg
-                    if err_txt not in feasibility_alerts:
-                        feasibility_alerts.append(err_txt)
+            # Single live execution logs window
+            with st.expander("Execution Logs", expanded=True):
+                log_placeholder = st.empty()
+                log_placeholder.code("Initializing orchestration engine...", language="text")
 
-            status_placeholder = st.status("Solving assignment...", expanded=True)
-            success = False
-            try:
-                with status_placeholder:
-                    st.write("Initializing orchestration engine...")
-                    success = run_system(
-                        roster_csv=active_paths["roster"],
-                        presenters_csv=active_paths["presenters"],
-                        signups_csv=active_paths["signups"],
-                        presentations_csv=active_paths["presentations"],
-                        category=selected_category,
-                        run_all=run_all,
-                        min_cap=int(min_cap),
-                        max_cap=int(max_cap),
-                        generate_pdfs=generate_pdfs,
-                        output_base_dir="output",
-                        logger=log_callback,
-                    )
+                def log_callback(msg):
+                    st.session_state.logs.append(msg)
+                    log_placeholder.code("\n".join(st.session_state.logs), language="text")
+                    if "Infeasible:" in msg:
+                        m = re.search(r"Infeasible:.*", msg)
+                        err_txt = m.group(0) if m else msg
+                        if err_txt not in feasibility_alerts:
+                            feasibility_alerts.append(err_txt)
+
+                success = False
+                try:
+                    with st.spinner("Solving assignment linear program and generating outputs..."):
+                        success = run_system(
+                            roster_csv=active_paths["roster"],
+                            presenters_csv=active_paths["presenters"],
+                            signups_csv=active_paths["signups"],
+                            presentations_csv=active_paths["presentations"],
+                            category=selected_category,
+                            run_all=run_all,
+                            min_cap=int(min_cap),
+                            max_cap=int(max_cap),
+                            generate_pdfs=generate_pdfs,
+                            output_base_dir="output",
+                            logger=log_callback,
+                        )
                     st.session_state.last_run_success = success
                     st.session_state.feasibility_errors = feasibility_alerts
 
-                    if success:
-                        status_placeholder.update(label="Assignment completed successfully.", state="complete", expanded=False)
-                        st.success("Assignment process completed successfully.")
-                    else:
-                        status_placeholder.update(label="Assignment process encountered errors.", state="error", expanded=True)
-                        st.error("Assignment process failed. Review logs below for details.")
+                except ValueError as ve:
+                    st.session_state.last_run_success = False
+                    st.error(f"Feasibility Error: {ve}")
+                except Exception as e:
+                    st.session_state.last_run_success = False
+                    st.error(f"Critical Error: {e}")
 
-            except ValueError as ve:
-                st.session_state.last_run_success = False
-                status_placeholder.update(label="Feasibility Constraint Error", state="error", expanded=True)
-                st.error(f"Feasibility Error: {ve}")
-            except Exception as e:
-                st.session_state.last_run_success = False
-                status_placeholder.update(label="Execution Failed", state="error", expanded=True)
-                st.error(f"Critical Error: {e}")
+            if st.session_state.last_run_success:
+                st.success("Assignment process completed successfully.")
+            elif st.session_state.last_run_success is False:
+                st.error("Assignment process failed. Review logs above for details.")
 
             for fe in feasibility_alerts:
                 st.error(f"Constraint Infeasible: {fe}")
 
-    # --- Execution Logs ---
-    if st.session_state.logs:
-        with st.expander("Execution Logs", expanded=True):
+    # --- Execution Logs for Subsequent Interactions ---
+    elif st.session_state.logs:
+        with st.expander("Execution Logs", expanded=False):
             st.code("\n".join(st.session_state.logs), language="text")
 
     # --- Generated Outputs Section ---
@@ -572,15 +572,44 @@ def main():
 
         st.write("")
 
-        # Structured tabs
-        tab_csv, tab_roster, tab_sched = st.tabs([
-            f"CSV Files ({len(csv_files)})",
-            f"Class Rosters ({len(roster_pdfs)})",
-            f"Student Schedules ({len(sched_pdfs)})",
-        ])
+        # Navigation view selector (session-state-backed to avoid reset on reruns)
+        TAB_CSV = "csv"
+        TAB_ROSTERS = "rosters"
+        TAB_SCHEDULES = "schedules"
 
-        # --- Tab 1: CSV Files & Interactive Preview ---
-        with tab_csv:
+        tab_options = [TAB_CSV, TAB_ROSTERS, TAB_SCHEDULES]
+        tab_labels = {
+            TAB_CSV: f"CSV Files ({len(csv_files)})",
+            TAB_ROSTERS: f"Class Rosters ({len(roster_pdfs)})",
+            TAB_SCHEDULES: f"Student Schedules ({len(sched_pdfs)})",
+        }
+
+        if hasattr(st, "segmented_control"):
+            selected_tab = st.segmented_control(
+                "Output View",
+                options=tab_options,
+                format_func=lambda x: tab_labels[x],
+                default=TAB_CSV,
+                required=True,
+                key="active_output_tab",
+                label_visibility="collapsed",
+            )
+        else:
+            selected_tab = st.radio(
+                "Output View",
+                options=tab_options,
+                format_func=lambda x: tab_labels[x],
+                index=0,
+                horizontal=True,
+                key="active_output_tab",
+                label_visibility="collapsed",
+            )
+
+        if not selected_tab:
+            selected_tab = TAB_CSV
+
+        # --- Section 1: CSV Files & Interactive Preview ---
+        if selected_tab == TAB_CSV:
             if not csv_files:
                 st.caption("No CSV files generated.")
             else:
@@ -628,8 +657,8 @@ def main():
                     ]
                     st.dataframe(pd.DataFrame(summary_data), use_container_width=True, hide_index=True)
 
-        # --- Tab 2: Class Rosters PDF ---
-        with tab_roster:
+        # --- Section 2: Class Rosters PDF ---
+        elif selected_tab == TAB_ROSTERS:
             if not roster_pdfs:
                 st.caption("No class roster PDFs available. Ensure 'Generate PDFs' was checked during the run.")
             else:
@@ -683,10 +712,35 @@ def main():
                             )
 
                     # In-browser roster preview
-                    roster_view_pdf, roster_view_table = st.tabs(["PDF Document Preview", "Student Roster Table"])
-                    with roster_view_pdf:
+                    sub_options = ["pdf", "table"]
+                    sub_labels = {
+                        "pdf": "PDF Document Preview",
+                        "table": "Student Roster Table",
+                    }
+                    if hasattr(st, "segmented_control"):
+                        roster_sub_mode = st.segmented_control(
+                            "Roster View Mode",
+                            options=sub_options,
+                            format_func=lambda x: sub_labels[x],
+                            default="pdf",
+                            required=True,
+                            key="roster_sub_view",
+                            label_visibility="collapsed",
+                        )
+                    else:
+                        roster_sub_mode = st.radio(
+                            "Roster View Mode",
+                            options=sub_options,
+                            format_func=lambda x: sub_labels[x],
+                            index=0,
+                            horizontal=True,
+                            key="roster_sub_view",
+                            label_visibility="collapsed",
+                        )
+
+                    if roster_sub_mode == "pdf":
                         render_pdf_preview(target_roster["full_path"], height=650)
-                    with roster_view_table:
+                    else:
                         assignment_dfs = [pd.read_csv(f["full_path"]) for f in csv_files if f["type"] == "Assignment"]
                         matched_students = find_class_students(selected_roster_name, assignment_dfs)
                         if matched_students is not None and not matched_students.empty:
@@ -714,8 +768,8 @@ def main():
                                         use_container_width=True,
                                     )
 
-        # --- Tab 3: Student Schedules PDF ---
-        with tab_sched:
+        # --- Section 3: Student Schedules PDF ---
+        elif selected_tab == TAB_SCHEDULES:
             if not sched_pdfs:
                 st.caption("No student schedule PDFs available. Ensure 'Generate PDFs' was checked during the run.")
             else:
@@ -769,10 +823,35 @@ def main():
                             )
 
                     # In-browser schedule preview
-                    sched_view_pdf, sched_view_table = st.tabs(["PDF Document Preview", "Schedule Table"])
-                    with sched_view_pdf:
+                    sched_sub_options = ["pdf", "table"]
+                    sched_sub_labels = {
+                        "pdf": "PDF Document Preview",
+                        "table": "Schedule Table",
+                    }
+                    if hasattr(st, "segmented_control"):
+                        sched_sub_mode = st.segmented_control(
+                            "Schedule View Mode",
+                            options=sched_sub_options,
+                            format_func=lambda x: sched_sub_labels[x],
+                            default="pdf",
+                            required=True,
+                            key="sched_sub_view",
+                            label_visibility="collapsed",
+                        )
+                    else:
+                        sched_sub_mode = st.radio(
+                            "Schedule View Mode",
+                            options=sched_sub_options,
+                            format_func=lambda x: sched_sub_labels[x],
+                            index=0,
+                            horizontal=True,
+                            key="sched_sub_view",
+                            label_visibility="collapsed",
+                        )
+
+                    if sched_sub_mode == "pdf":
                         render_pdf_preview(target_sched["full_path"], height=550)
-                    with sched_view_table:
+                    else:
                         assignment_dfs = [pd.read_csv(f["full_path"]) for f in csv_files if f["type"] == "Assignment"]
                         matched_sched = find_student_schedule(selected_sched_name.replace(".pdf", ""), assignment_dfs)
                         if matched_sched is not None and not matched_sched.empty:
